@@ -1,7 +1,14 @@
 import { useAuth, useSignUp } from "@clerk/expo";
 import { type Href, Link, useRouter } from "expo-router";
 import React from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 
 export default function Page() {
   const { signUp, errors, fetchStatus } = useSignUp();
@@ -17,30 +24,32 @@ export default function Page() {
       emailAddress,
       password,
     });
+
     if (error) {
       console.error(JSON.stringify(error, null, 2));
       return;
     }
 
-    if (!error) await signUp.verifications.sendEmailCode();
+    if (!error) {
+      await signUp.verifications.sendEmailCode();
+    }
   };
 
   const handleVerify = async () => {
     await signUp.verifications.verifyEmailCode({
       code,
     });
+
     if (signUp.status === "complete") {
       await signUp.finalize({
-        // Redirect the user to the home page after signing up
         navigate: ({ session, decorateUrl }) => {
           if (session?.currentTask) {
-            // Handle pending session tasks
-            // See https://clerk.com/docs/guides/development/custom-flows/authentication/session-tasks
             console.log(session?.currentTask);
             return;
           }
 
           const url = decorateUrl("/");
+
           if (url.startsWith("http")) {
             window.location.href = url;
           } else {
@@ -49,7 +58,6 @@ export default function Page() {
         },
       });
     } else {
-      // Check why the sign-up is not complete
       console.error("Sign-up attempt not complete:", signUp);
     }
   };
@@ -64,166 +72,147 @@ export default function Page() {
     signUp.missingFields.length === 0
   ) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.title}>Verify your account</Text>
-        <TextInput
-          style={styles.input}
-          value={code}
-          placeholder="Enter your verification code"
-          placeholderTextColor="#666666"
-          onChangeText={(code) => setCode(code)}
-          keyboardType="numeric"
-        />
-        {errors.fields.code && (
-          <Text style={styles.error}>{errors.fields.code.message}</Text>
-        )}
-        <Pressable
-          style={({ pressed }) => [
-            styles.button,
-            fetchStatus === "fetching" && styles.buttonDisabled,
-            pressed && styles.buttonPressed,
-          ]}
-          onPress={handleVerify}
-          disabled={fetchStatus === "fetching"}
-        >
-          <Text style={styles.buttonText}>Verify</Text>
-        </Pressable>
-        <Pressable
-          style={({ pressed }) => [
-            styles.secondaryButton,
-            pressed && styles.buttonPressed,
-          ]}
-          onPress={() => signUp.verifications.sendEmailCode()}
-        >
-          <Text style={styles.secondaryButtonText}>I need a new code</Text>
-        </Pressable>
-      </View>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        className="flex-1 bg-zinc-950 px-6 justify-center"
+      >
+        <View className="rounded-3xl bg-zinc-900 border border-zinc-800 p-6">
+          <Text className="text-3xl font-bold text-white mb-2">
+            Verify your email
+          </Text>
+
+          <Text className="text-zinc-400 mb-6">
+            Enter the verification code sent to your email address.
+          </Text>
+
+          <TextInput
+            value={code}
+            placeholder="Enter verification code"
+            placeholderTextColor="#71717a"
+            onChangeText={(code) => setCode(code)}
+            keyboardType="numeric"
+            className="bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-4 text-white text-base"
+          />
+
+          {errors.fields.code && (
+            <Text className="text-red-500 text-sm mt-2">
+              {errors.fields.code.message}
+            </Text>
+          )}
+
+          <Pressable
+            className={`mt-5 rounded-2xl py-4 items-center ${
+              fetchStatus === "fetching" ? "bg-purple-700/50" : "bg-purple-500"
+            }`}
+            onPress={handleVerify}
+            disabled={fetchStatus === "fetching"}
+          >
+            <Text className="text-white font-semibold text-base">
+              Verify Email
+            </Text>
+          </Pressable>
+
+          <Pressable
+            className="mt-4 py-3 items-center"
+            onPress={() => signUp.verifications.sendEmailCode()}
+          >
+            <Text className="text-purple-400 font-medium">
+              I need a new code
+            </Text>
+          </Pressable>
+        </View>
+      </KeyboardAvoidingView>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Sign up</Text>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      className="flex-1 bg-zinc-950 justify-center px-6"
+    >
+      <View className="rounded-3xl bg-zinc-900 border border-zinc-800 p-6 shadow-2xl">
+        <View className="mb-8">
+          <Text className="text-4xl font-bold text-white">Create account</Text>
 
-      <Text style={styles.label}>Email address</Text>
-      <TextInput
-        style={styles.input}
-        autoCapitalize="none"
-        value={emailAddress}
-        placeholder="Enter email"
-        placeholderTextColor="#666666"
-        onChangeText={(emailAddress) => setEmailAddress(emailAddress)}
-        keyboardType="email-address"
-      />
-      {errors.fields.emailAddress && (
-        <Text style={styles.error}>{errors.fields.emailAddress.message}</Text>
-      )}
-      <Text style={styles.label}>Password</Text>
-      <TextInput
-        style={styles.input}
-        value={password}
-        placeholder="Enter password"
-        placeholderTextColor="#666666"
-        secureTextEntry={true}
-        onChangeText={(password) => setPassword(password)}
-      />
-      {errors.fields.password && (
-        <Text style={styles.error}>{errors.fields.password.message}</Text>
-      )}
-      <Pressable
-        style={({ pressed }) => [
-          styles.button,
-          (!emailAddress || !password || fetchStatus === "fetching") &&
-            styles.buttonDisabled,
-          pressed && styles.buttonPressed,
-        ]}
-        onPress={handleSubmit}
-        disabled={!emailAddress || !password || fetchStatus === "fetching"}
-      >
-        <Text style={styles.buttonText}>Sign up</Text>
-      </Pressable>
-      {/* For your debugging purposes. You can just console.log errors, but we put them in the UI for convenience */}
-      {errors && (
-        <Text style={styles.debug}>{JSON.stringify(errors, null, 2)}</Text>
-      )}
+          <Text className="text-zinc-400 mt-2 text-base">
+            Sign up to get started with your account
+          </Text>
+        </View>
 
-      <View style={styles.linkContainer}>
-        <Text>Already have an account? </Text>
-        <Link href="/sign-in">
-          <Text>Sign in</Text>
-        </Link>
+        <View className="gap-5">
+          <View>
+            <Text className="text-zinc-200 text-sm font-medium mb-2">
+              Email address
+            </Text>
+
+            <TextInput
+              autoCapitalize="none"
+              value={emailAddress}
+              placeholder="Enter your email"
+              placeholderTextColor="#71717a"
+              onChangeText={(emailAddress) => setEmailAddress(emailAddress)}
+              keyboardType="email-address"
+              className="bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-4 text-white text-base"
+            />
+
+            {errors.fields.emailAddress && (
+              <Text className="text-red-500 text-sm mt-2">
+                {errors.fields.emailAddress.message}
+              </Text>
+            )}
+          </View>
+
+          <View>
+            <Text className="text-zinc-200 text-sm font-medium mb-2">
+              Password
+            </Text>
+
+            <TextInput
+              value={password}
+              placeholder="Create a password"
+              placeholderTextColor="#71717a"
+              secureTextEntry
+              onChangeText={(password) => setPassword(password)}
+              className="bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-4 text-white text-base"
+            />
+
+            {errors.fields.password && (
+              <Text className="text-red-500 text-sm mt-2">
+                {errors.fields.password.message}
+              </Text>
+            )}
+          </View>
+
+          <Pressable
+            className={`rounded-2xl py-4 items-center mt-2 ${
+              !emailAddress || !password || fetchStatus === "fetching"
+                ? "bg-purple-700/50"
+                : "bg-purple-500"
+            }`}
+            onPress={handleSubmit}
+            disabled={!emailAddress || !password || fetchStatus === "fetching"}
+          >
+            <Text className="text-white font-semibold text-base">
+              {fetchStatus === "fetching" ? "Creating account..." : "Sign up"}
+            </Text>
+          </Pressable>
+        </View>
+
+        <View className="flex-row justify-center items-center mt-8">
+          <Text className="text-zinc-400">Already have an account?</Text>
+
+          <Link href="/sign-in" asChild>
+            <Pressable>
+              <Text className="text-purple-400 font-semibold ml-1">
+                Sign in
+              </Text>
+            </Pressable>
+          </Link>
+        </View>
+
+        {/* Required for Clerk captcha */}
+        <View nativeID="clerk-captcha" className="mt-4" />
       </View>
-
-      {/* Required for sign-up flows. Clerk's bot sign-up protection is enabled by default */}
-      <View nativeID="clerk-captcha" />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    gap: 12,
-  },
-  title: {
-    marginBottom: 8,
-  },
-  label: {
-    fontWeight: "600",
-    fontSize: 14,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: "#fff",
-  },
-  button: {
-    backgroundColor: "#0a7ea4",
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    alignItems: "center",
-    marginTop: 8,
-  },
-  buttonPressed: {
-    opacity: 0.7,
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
-  secondaryButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    alignItems: "center",
-    marginTop: 8,
-  },
-  secondaryButtonText: {
-    color: "#0a7ea4",
-    fontWeight: "600",
-  },
-  linkContainer: {
-    flexDirection: "row",
-    gap: 4,
-    marginTop: 12,
-    alignItems: "center",
-  },
-  error: {
-    color: "#d32f2f",
-    fontSize: 12,
-    marginTop: -8,
-  },
-  debug: {
-    fontSize: 10,
-    opacity: 0.5,
-    marginTop: 8,
-  },
-});
