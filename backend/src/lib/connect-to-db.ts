@@ -1,3 +1,5 @@
+// backend/src/lib/connect-to-db.ts
+
 import prisma from "../config/prisma.orm";
 
 export const connectToDB = async () => {
